@@ -1,0 +1,202 @@
+import React, { useState } from 'react';
+import {
+  View, Text, ScrollView, TouchableOpacity, StyleSheet, Modal,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { QrCode, X, Clock, MapPin, Star } from 'lucide-react-native';
+import { colors } from '../theme';
+import { useApp } from '../context/AppContext';
+
+const STATUS = {
+  pickupReady: { label: '픽업 대기', color: colors.primaryGreen, bg: colors.freshMint },
+  pending:     { label: '픽업 대기', color: colors.primaryGreen, bg: colors.freshMint },
+  completed:   { label: '픽업 완료', color: '#6B7280',           bg: '#F3F4F6' },
+  cancelling:  { label: '취소 요청', color: '#B45309',           bg: '#FEF3C7' },
+  cancelled:   { label: '취소됨',   color: colors.alertRed,     bg: '#FFF0F0' },
+};
+
+const TABS = [
+  { key: 'pending',   label: '예약중' },
+  { key: 'completed', label: '픽업완료' },
+  { key: 'cancelled', label: '취소·환불' },
+];
+
+export default function OrderHistoryScreen({ navigation }) {
+  const { orders, handleCancelOrder } = useApp();
+  const [tab, setTab] = useState('pending');
+  const [showQR, setShowQR] = useState(null);
+  const [showCancel, setShowCancel] = useState(null);
+
+  const filtered = orders.filter(o => {
+    if (tab === 'pending')   return o.status === 'pickupReady' || o.status === 'pending';
+    if (tab === 'completed') return o.status === 'completed';
+    if (tab === 'cancelled') return o.status === 'cancelled' || o.status === 'cancelling';
+    return true;
+  });
+
+  return (
+    <SafeAreaView style={styles.safe} edges={['top']}>
+      {/* 헤더 */}
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>주문내역</Text>
+        <View style={styles.tabs}>
+          {TABS.map(t => (
+            <TouchableOpacity key={t.key} style={[styles.tab, tab === t.key && styles.tabActive]} onPress={() => setTab(t.key)}>
+              <Text style={[styles.tabText, tab === t.key && styles.tabTextActive]}>{t.label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.list}>
+        {filtered.length === 0 ? (
+          <View style={styles.empty}>
+            <Text style={styles.emptyEmoji}>📋</Text>
+            <Text style={styles.emptyText}>주문 내역이 없습니다</Text>
+          </View>
+        ) : filtered.map(order => {
+          const st = STATUS[order.status] || STATUS.pending;
+          const isPending = order.status === 'pickupReady' || order.status === 'pending';
+          return (
+            <View key={order.id} style={styles.card}>
+              <View style={[styles.statusBadge, { backgroundColor: st.bg }]}>
+                <Text style={[styles.statusText, { color: st.color }]}>{st.label}</Text>
+              </View>
+
+              <Text style={styles.productName}>{order.productName}</Text>
+              <Text style={styles.storeName}>{order.store}</Text>
+
+              <View style={styles.metaBox}>
+                <View style={styles.metaRow}>
+                  <Text style={styles.metaLabel}>픽업 시간</Text>
+                  <View style={styles.metaRight}>
+                    <Clock size={11} color={colors.warmOrange} />
+                    <Text style={styles.metaValue}>{order.pickupTime}</Text>
+                  </View>
+                </View>
+                <View style={styles.metaRow}>
+                  <Text style={styles.metaLabel}>픽업번호</Text>
+                  <Text style={[styles.metaValue, { color: colors.primaryGreen, fontWeight: '900' }]}>{order.id}</Text>
+                </View>
+                {order.couponName && (
+                  <View style={styles.metaRow}>
+                    <Text style={styles.metaLabel}>적용 쿠폰</Text>
+                    <Text style={[styles.metaValue, { color: colors.primaryGreen }]}>{order.couponName}</Text>
+                  </View>
+                )}
+              </View>
+
+              {/* 픽업 대기: QR + 취소 버튼 */}
+              {isPending && (
+                <View style={styles.actionRow}>
+                  <TouchableOpacity style={styles.qrBtn} onPress={() => setShowQR(order)}>
+                    <QrCode size={14} color={colors.primaryGreen} />
+                    <Text style={styles.qrBtnText}>QR 보기</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.cancelBtn} onPress={() => setShowCancel(order)}>
+                    <Text style={styles.cancelBtnText}>취소 요청</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              {/* 픽업 완료: 리뷰 쓰기 버튼 */}
+              {order.status === 'completed' && (
+                <TouchableOpacity
+                  style={styles.reviewBtn}
+                  onPress={() => navigation.navigate('WriteReview', { order })}
+                >
+                  <Star size={14} color={colors.primaryGreen} fill={colors.primaryGreen} />
+                  <Text style={styles.reviewBtnText}>리뷰 쓰기</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          );
+        })}
+      </ScrollView>
+
+      {/* QR 모달 */}
+      <Modal visible={!!showQR} transparent animationType="fade">
+        <TouchableOpacity style={styles.modalOverlay} onPress={() => setShowQR(null)}>
+          <View style={styles.qrModal}>
+            <Text style={styles.qrModalTitle}>픽업 QR코드</Text>
+            <Text style={styles.qrModalStore}>{showQR?.store}</Text>
+            <View style={styles.qrBox}>
+              <QrCode size={100} color={colors.charcoalBlack} />
+              <Text style={styles.qrId}>{showQR?.id}</Text>
+            </View>
+            <Text style={styles.qrTime}>픽업 시간: {showQR?.pickupTime}</Text>
+            <TouchableOpacity style={styles.qrCloseBtn} onPress={() => setShowQR(null)}>
+              <Text style={styles.qrCloseBtnText}>닫기</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* 취소 확인 모달 */}
+      <Modal visible={!!showCancel} transparent animationType="slide">
+        <TouchableOpacity style={styles.modalOverlay} onPress={() => setShowCancel(null)} />
+        <View style={styles.cancelSheet}>
+          <Text style={styles.cancelSheetTitle}>주문을 취소할까요?</Text>
+          <Text style={styles.cancelSheetSub}>취소된 주문은 복구할 수 없습니다.{'\n'}식품 특성상 픽업 후 취소는 불가합니다.</Text>
+          <View style={styles.cancelSheetBtns}>
+            <TouchableOpacity style={styles.cancelSheetBack} onPress={() => setShowCancel(null)}>
+              <Text style={styles.cancelSheetBackText}>돌아가기</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.cancelSheetConfirm} onPress={() => { handleCancelOrder(showCancel.id); setShowCancel(null); }}>
+              <Text style={styles.cancelSheetConfirmText}>취소하기</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  safe: { flex: 1, backgroundColor: colors.softGray },
+  header: { backgroundColor: colors.white, paddingHorizontal: 16, paddingTop: 16, paddingBottom: 0 },
+  headerTitle: { fontSize: 20, fontWeight: '900', color: colors.charcoalBlack, marginBottom: 14 },
+  tabs: { flexDirection: 'row', borderBottomWidth: 2, borderBottomColor: colors.softGray },
+  tab: { flex: 1, paddingVertical: 10, alignItems: 'center', borderBottomWidth: 2.5, borderBottomColor: 'transparent', marginBottom: -2 },
+  tabActive: { borderBottomColor: colors.primaryGreen },
+  tabText: { fontSize: 14, color: colors.mediumGray },
+  tabTextActive: { color: colors.primaryGreen, fontWeight: '800' },
+  list: { padding: 16, paddingBottom: 100 },
+  empty: { alignItems: 'center', paddingTop: 60 },
+  emptyEmoji: { fontSize: 48, marginBottom: 12 },
+  emptyText: { fontSize: 15, color: colors.mediumGray },
+  card: { backgroundColor: colors.white, borderRadius: 16, padding: 16, marginBottom: 12 },
+  statusBadge: { alignSelf: 'flex-start', paddingHorizontal: 9, paddingVertical: 3, borderRadius: 8, marginBottom: 10 },
+  statusText: { fontSize: 12, fontWeight: '700' },
+  productName: { fontSize: 16, fontWeight: '800', color: colors.charcoalBlack, marginBottom: 4 },
+  storeName: { fontSize: 13, color: colors.mediumGray, marginBottom: 12 },
+  metaBox: { backgroundColor: colors.softGray, borderRadius: 10, padding: 12, marginBottom: 12 },
+  metaRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
+  metaLabel: { fontSize: 12, color: colors.mediumGray },
+  metaRight: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  metaValue: { fontSize: 12, fontWeight: '700', color: colors.charcoalBlack },
+  actionRow: { flexDirection: 'row', gap: 8 },
+  qrBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, backgroundColor: colors.freshMint, borderRadius: 10, padding: 10 },
+  qrBtnText: { fontSize: 13, fontWeight: '700', color: colors.primaryGreen },
+  cancelBtn: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFF0F0', borderRadius: 10, padding: 10 },
+  cancelBtnText: { fontSize: 13, fontWeight: '700', color: colors.alertRed },
+  reviewBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: colors.freshMint, borderWidth: 1.5, borderColor: colors.primaryGreen, borderRadius: 10, padding: 10 },
+  reviewBtnText: { fontSize: 13, fontWeight: '700', color: colors.primaryGreen },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center' },
+  qrModal: { backgroundColor: colors.white, borderRadius: 24, padding: 28, width: '80%', alignItems: 'center' },
+  qrModalTitle: { fontSize: 18, fontWeight: '800', color: colors.charcoalBlack, marginBottom: 4 },
+  qrModalStore: { fontSize: 14, color: colors.mediumGray, marginBottom: 20 },
+  qrBox: { backgroundColor: colors.softGray, borderRadius: 16, padding: 20, alignItems: 'center', gap: 12, marginBottom: 14, width: '100%' },
+  qrId: { fontSize: 20, fontWeight: '900', color: colors.primaryGreen, letterSpacing: 2 },
+  qrTime: { fontSize: 13, color: colors.mediumGray, marginBottom: 16 },
+  qrCloseBtn: { backgroundColor: colors.primaryGreen, borderRadius: 12, paddingHorizontal: 40, paddingVertical: 12 },
+  qrCloseBtnText: { color: colors.white, fontWeight: '700', fontSize: 15 },
+  cancelSheet: { backgroundColor: colors.white, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 40 },
+  cancelSheetTitle: { fontSize: 18, fontWeight: '800', color: colors.charcoalBlack, marginBottom: 8 },
+  cancelSheetSub: { fontSize: 14, color: colors.mediumGray, lineHeight: 22, marginBottom: 24 },
+  cancelSheetBtns: { flexDirection: 'row', gap: 10 },
+  cancelSheetBack: { flex: 1, backgroundColor: colors.softGray, borderRadius: 12, padding: 14, alignItems: 'center' },
+  cancelSheetBackText: { fontSize: 15, fontWeight: '700', color: colors.charcoalBlack },
+  cancelSheetConfirm: { flex: 1, backgroundColor: colors.alertRed, borderRadius: 12, padding: 14, alignItems: 'center' },
+  cancelSheetConfirmText: { fontSize: 15, fontWeight: '700', color: colors.white },
+});
