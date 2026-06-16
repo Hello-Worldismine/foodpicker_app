@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Linking } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowLeft, Share2, Star, Navigation, Phone, MessageSquare,
-  MapPin, PhoneCall, Clock, AlarmClock } from 'lucide-react-native';
+import {
+  ArrowLeft, Share2, Star, Navigation, Phone, MessageSquare,
+  MapPin, Clock,
+} from 'lucide-react-native';
 import { colors } from '../theme';
 import { stores } from '../data/mockData';
 import { useApp } from '../context/AppContext';
 import ProductCard from '../components/ProductCard';
-
-const TABS = [{ key: 'products', label: (n) => `판매 상품 ${n}개` }, { key: 'info', label: () => '매장 정보' }];
 
 const STATUS_COLOR = {
   selling: colors.primaryGreen,
@@ -25,62 +25,72 @@ export default function StoreScreen({ route, navigation }) {
   if (!store) return null;
 
   const storeProducts = productList.filter(p => p.storeId === storeId);
-  const statusColor = STATUS_COLOR[store.status] || colors.primaryGreen;
+  const availableProducts = storeProducts.filter(
+    p => p.status === 'selling' && p.stock > 0 && new Date(p.expiryDate) > new Date()
+  );
+  const soldoutProducts = storeProducts.filter(
+    p => p.status === 'soldout' || p.stock === 0 || new Date(p.expiryDate) <= new Date()
+  );
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.softGray }}>
-      {/* 녹색 헤더 + 히어로 영역 */}
-      <LinearGradientHeader>
+      {/* 녹색 헤더 */}
+      <View style={styles.greenHeader}>
         <SafeAreaView edges={['top']}>
           {/* 네비게이션 바 */}
           <View style={styles.navBar}>
             <TouchableOpacity onPress={() => navigation.goBack()} style={styles.navBtn}>
-              <ArrowLeft size={22} color={colors.white} />
+              <ArrowLeft size={20} color={colors.white} />
             </TouchableOpacity>
             <TouchableOpacity style={styles.navBtn}>
-              <Share2 size={20} color={colors.white} />
+              <Share2 size={18} color={colors.white} />
             </TouchableOpacity>
           </View>
 
-          {/* 매장 히어로 */}
+          {/* 매장 히어로 — 웹과 동일한 가로 레이아웃 */}
           <View style={styles.hero}>
             <View style={styles.storeIconWrap}>
               <Text style={styles.storeIconEmoji}>{store.emoji}</Text>
             </View>
-            <Text style={styles.heroName}>{store.name}</Text>
-            <Text style={styles.heroCategory}>{store.subcategory || store.category}</Text>
-            <View style={styles.heroMeta}>
-              <View style={styles.heroBadge}>
-                <Star size={13} color="#FBBF24" fill="#FBBF24" />
-                <Text style={styles.heroBadgeText}>{store.rating}</Text>
-                <Text style={styles.heroBadgeSub}>({store.reviewCount})</Text>
-              </View>
-              <View style={styles.heroBadge}>
-                <MapPin size={12} color="rgba(255,255,255,0.8)" />
-                <Text style={styles.heroBadgeText}>{store.distance}m</Text>
+            <View style={styles.heroInfo}>
+              <Text style={styles.heroName}>{store.name}</Text>
+              <Text style={styles.heroCategory}>{store.subcategory || store.category}</Text>
+              <View style={styles.heroMeta}>
+                <TouchableOpacity
+                  style={styles.heroBadge}
+                  onPress={() => navigation.navigate('Review', { store })}
+                >
+                  <Star size={12} color="#FFD700" fill="#FFD700" />
+                  <Text style={styles.heroBadgeText}>{store.rating}</Text>
+                  <Text style={styles.heroBadgeSub}>({store.reviewCount})</Text>
+                </TouchableOpacity>
+                <View style={styles.heroBadge}>
+                  <MapPin size={11} color="rgba(255,255,255,0.8)" />
+                  <Text style={styles.heroBadgeSub}>
+                    {store.distance >= 1000 ? `${(store.distance/1000).toFixed(1)}km` : `${store.distance}m`}
+                  </Text>
+                </View>
               </View>
             </View>
           </View>
         </SafeAreaView>
-      </LinearGradientHeader>
+      </View>
 
-      {/* 액션 버튼 3개 */}
+      {/* 액션 버튼 3개 — 웹과 동일한 열(column) 레이아웃 */}
       <View style={styles.actionRow}>
-        <TouchableOpacity style={styles.actionBtn}>
+        <TouchableOpacity style={[styles.actionBtn, { backgroundColor: colors.freshMint }]}>
           <Navigation size={18} color={colors.primaryGreen} />
-          <Text style={styles.actionLabel}>길찾기</Text>
+          <Text style={[styles.actionLabel, { color: colors.primaryGreen }]}>길찾기</Text>
         </TouchableOpacity>
-        <View style={styles.actionDivider} />
         <TouchableOpacity
-          style={styles.actionBtn}
+          style={[styles.actionBtn, { backgroundColor: colors.softGray }]}
           onPress={() => store.phone && Linking.openURL(`tel:${store.phone}`)}
         >
           <Phone size={18} color={colors.charcoalBlack} />
           <Text style={[styles.actionLabel, { color: colors.charcoalBlack }]}>전화</Text>
         </TouchableOpacity>
-        <View style={styles.actionDivider} />
         <TouchableOpacity
-          style={styles.actionBtn}
+          style={[styles.actionBtn, { backgroundColor: colors.softGray }]}
           onPress={() => navigation.navigate('Review', { store })}
         >
           <MessageSquare size={18} color={colors.charcoalBlack} />
@@ -89,189 +99,213 @@ export default function StoreScreen({ route, navigation }) {
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false}>
-        {/* 매장 정보 rows */}
+        {/* 매장 기본 정보 */}
         <View style={styles.infoCard}>
-          <InfoRow icon={<MapPin size={15} color={colors.mediumGray} />} label="주소" value={store.address} />
-          <InfoRow icon={<PhoneCall size={15} color={colors.mediumGray} />} label="전화" value={store.phone} />
-          <InfoRow icon={<Clock size={15} color={colors.mediumGray} />} label="영업시간" value={store.businessHours} />
-          <InfoRow
-            icon={<AlarmClock size={15} color={colors.warmOrange} />}
-            label="픽업시간"
-            value={store.pickupTime}
-            valueStyle={{ color: colors.warmOrange, fontWeight: '800' }}
-            isLast
-          />
+          {[
+            { icon: <MapPin size={15} color={colors.mediumGray} />, label: '주소',    value: store.address },
+            { icon: <Phone size={15} color={colors.mediumGray} />, label: '전화',    value: store.phone },
+            { icon: <Clock size={15} color={colors.mediumGray} />, label: '영업시간', value: store.businessHours },
+            { icon: <Clock size={15} color={colors.warmOrange} />, label: '픽업시간', value: store.pickupTime, highlight: true },
+          ].map((item, idx, arr) => (
+            <View key={item.label} style={[styles.infoRow, idx < arr.length - 1 && styles.infoRowBorder]}>
+              <View style={styles.infoIconWrap}>{item.icon}</View>
+              <Text style={styles.infoRowLabel}>{item.label}</Text>
+              <Text style={[
+                styles.infoRowValue,
+                item.highlight && { color: colors.warmOrange, fontWeight: '700' },
+              ]} numberOfLines={2}>{item.value}</Text>
+            </View>
+          ))}
+          {store.description ? (
+            <Text style={styles.descText}>{store.description}</Text>
+          ) : null}
         </View>
 
-        {/* 설명 + 해시태그 */}
-        {(store.description || store.notice) && (
-          <View style={styles.descCard}>
-            <Text style={styles.descText}>{store.description || store.notice}</Text>
-            {store.tags?.length > 0 && (
-              <View style={styles.tagRow}>
-                {store.tags.map(t => (
-                  <View key={t} style={styles.tag}>
-                    <Text style={styles.tagText}>{t}</Text>
-                  </View>
-                ))}
+        {/* 해시태그 */}
+        {store.tags?.length > 0 && (
+          <View style={styles.tagSection}>
+            {store.tags.map(t => (
+              <View key={t} style={styles.tag}>
+                <Text style={styles.tagText}>{t}</Text>
               </View>
-            )}
+            ))}
           </View>
         )}
 
-        {/* 탭 바 (sticky) */}
+        {/* 탭 바 */}
         <View style={styles.tabs}>
-          {TABS.map(t => {
-            const label = t.key === 'products'
-              ? `판매 상품 ${storeProducts.length}개`
-              : '매장 정보';
-            return (
-              <TouchableOpacity
-                key={t.key}
-                style={[styles.tabBtn, tab === t.key && styles.tabBtnActive]}
-                onPress={() => setTab(t.key)}
-              >
-                <Text style={[styles.tabText, tab === t.key && styles.tabTextActive]}>{label}</Text>
-              </TouchableOpacity>
-            );
-          })}
+          {[
+            { key: 'products', label: `판매 상품 ${availableProducts.length}개` },
+            { key: 'info',     label: '매장 정보' },
+          ].map(t => (
+            <TouchableOpacity
+              key={t.key}
+              style={[styles.tabBtn, tab === t.key && styles.tabBtnActive]}
+              onPress={() => setTab(t.key)}
+            >
+              <Text style={[styles.tabText, tab === t.key && styles.tabTextActive]}>{t.label}</Text>
+            </TouchableOpacity>
+          ))}
         </View>
 
         {/* 탭 콘텐츠 */}
         <View style={styles.tabContent}>
           {tab === 'products' && (
-            storeProducts.length === 0 ? (
-              <View style={styles.empty}>
-                <Text style={styles.emptyEmoji}>📦</Text>
-                <Text style={styles.emptyText}>등록된 상품이 없습니다</Text>
-              </View>
-            ) : storeProducts.map(p => (
-              <ProductCard
-                key={p.id}
-                product={p}
-                onPress={pr => navigation.navigate('ProductDetail', { productId: pr.id })}
-                onLike={handleLike}
-              />
-            ))
+            <>
+              {availableProducts.length === 0 && soldoutProducts.length === 0 && (
+                <View style={styles.empty}>
+                  <Text style={styles.emptyEmoji}>🛒</Text>
+                  <Text style={styles.emptyText}>현재 판매 중인 상품이 없습니다</Text>
+                </View>
+              )}
+              {availableProducts.length > 0 && availableProducts.map(p => (
+                <ProductCard
+                  key={p.id}
+                  product={p}
+                  onPress={pr => navigation.navigate('ProductDetail', { productId: pr.id })}
+                  onLike={handleLike}
+                  onStorePress={sid => navigation.navigate('Store', { storeId: sid })}
+                />
+              ))}
+              {soldoutProducts.length > 0 && (
+                <View>
+                  <Text style={styles.soldoutHeader}>품절 / 판매 종료</Text>
+                  {soldoutProducts.map(p => (
+                    <ProductCard
+                      key={p.id}
+                      product={p}
+                      onPress={() => {}}
+                      onLike={handleLike}
+                    />
+                  ))}
+                </View>
+              )}
+            </>
           )}
+
           {tab === 'info' && (
-            <View style={styles.infoTabCard}>
+            <View style={{ paddingTop: 12 }}>
               {store.notice ? (
                 <View style={styles.noticeBox}>
                   <Text style={styles.noticeTitle}>📢 매장 공지</Text>
                   <Text style={styles.noticeText}>{store.notice}</Text>
                 </View>
               ) : null}
-              <View style={styles.infoDetailRow}>
-                <Clock size={15} color={colors.mediumGray} />
-                <View>
-                  <Text style={styles.infoLabel}>픽업 가능 시간</Text>
-                  <Text style={styles.infoValue}>{store.pickupTime}</Text>
+
+              {/* 지도 플레이스홀더 */}
+              <View style={styles.mapPlaceholder}>
+                <MapGrid />
+                <View style={{ zIndex: 1, alignItems: 'center' }}>
+                  <Text style={{ fontSize: 28 }}>📍</Text>
+                  <View style={styles.mapLabel}>
+                    <Text style={styles.mapLabelText}>{store.name}</Text>
+                  </View>
                 </View>
               </View>
-              <View style={styles.infoDetailRow}>
-                <MapPin size={15} color={colors.mediumGray} />
-                <View>
-                  <Text style={styles.infoLabel}>주소</Text>
-                  <Text style={styles.infoValue}>{store.address}</Text>
-                </View>
+
+              {/* 상세 주소 + 길찾기 */}
+              <View style={styles.addressCard}>
+                <Text style={styles.addressTitle}>상세 주소</Text>
+                <Text style={styles.addressText}>{store.address}</Text>
+                <TouchableOpacity style={styles.dirBtn}>
+                  <Navigation size={15} color={colors.primaryGreen} />
+                  <Text style={styles.dirBtnText}>길찾기</Text>
+                </TouchableOpacity>
               </View>
             </View>
           )}
         </View>
+
         <View style={{ height: 40 }} />
       </ScrollView>
     </View>
   );
 }
 
-// 녹색 헤더 배경 컴포넌트 (LinearGradient 없이 단색 사용)
-function LinearGradientHeader({ children }) {
+function MapGrid() {
   return (
-    <View style={styles.greenHeader}>
-      {children}
-    </View>
-  );
-}
-
-function InfoRow({ icon, label, value, valueStyle, isLast }) {
-  return (
-    <View style={[styles.infoRow, !isLast && styles.infoRowBorder]}>
-      <View style={styles.infoIconWrap}>{icon}</View>
-      <Text style={styles.infoRowLabel}>{label}</Text>
-      <Text style={[styles.infoRowValue, valueStyle]} numberOfLines={1}>{value}</Text>
+    <View style={StyleSheet.absoluteFill} pointerEvents="none">
+      {[0.35, 0.5, 0.75].map((r, i) => (
+        <View key={`h${i}`} style={{ position: 'absolute', top: `${r * 100}%`, left: 0, right: 0, height: 7, backgroundColor: 'rgba(255,255,255,0.6)', borderRadius: 4 }} />
+      ))}
+      <View style={{ position: 'absolute', left: '35%', top: 0, bottom: 0, width: 7, backgroundColor: 'rgba(255,255,255,0.6)', borderRadius: 4 }} />
+      <View style={{ position: 'absolute', left: '65%', top: 0, bottom: 0, width: 7, backgroundColor: 'rgba(255,255,255,0.6)', borderRadius: 4 }} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  greenHeader: {
-    backgroundColor: colors.primaryGreen,
-  },
+  greenHeader: { backgroundColor: colors.primaryGreen },
+
   navBar: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingHorizontal: 16, paddingTop: 8, paddingBottom: 4,
   },
   navBtn: {
-    width: 38, height: 38, borderRadius: 19,
+    width: 40, height: 40, borderRadius: 20,
     backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center', justifyContent: 'center',
   },
-  hero: { alignItems: 'center', paddingBottom: 24, paddingTop: 8 },
+
+  /* 히어로 — 가로 레이아웃 */
+  hero: {
+    flexDirection: 'row', gap: 16, alignItems: 'center',
+    paddingHorizontal: 20, paddingTop: 8, paddingBottom: 24,
+  },
   storeIconWrap: {
-    width: 72, height: 72, borderRadius: 20,
-    backgroundColor: colors.white,
+    width: 72, height: 72, borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderWidth: 2, borderColor: 'rgba(255,255,255,0.3)',
     alignItems: 'center', justifyContent: 'center',
-    marginBottom: 12,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.12, shadowRadius: 6, elevation: 4,
+    flexShrink: 0,
   },
   storeIconEmoji: { fontSize: 36 },
+  heroInfo: { flex: 1 },
   heroName: { fontSize: 20, fontWeight: '900', color: colors.white, marginBottom: 4 },
-  heroCategory: { fontSize: 13, color: 'rgba(255,255,255,0.85)', marginBottom: 10 },
-  heroMeta: { flexDirection: 'row', gap: 10 },
+  heroCategory: { fontSize: 13, color: 'rgba(255,255,255,0.8)', marginBottom: 8 },
+  heroMeta: { flexDirection: 'row', gap: 6 },
   heroBadge: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    paddingHorizontal: 9, paddingVertical: 3, borderRadius: 20,
   },
   heroBadgeText: { color: colors.white, fontSize: 13, fontWeight: '700' },
   heroBadgeSub: { color: 'rgba(255,255,255,0.8)', fontSize: 12 },
 
+  /* 액션 버튼 — 열(column) 레이아웃, 개별 배경색 */
   actionRow: {
-    flexDirection: 'row', backgroundColor: colors.white,
-    paddingVertical: 4,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06, shadowRadius: 3, elevation: 2,
+    flexDirection: 'row', gap: 8,
+    backgroundColor: colors.white, padding: 12, paddingHorizontal: 16, marginBottom: 8,
   },
   actionBtn: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 6, paddingVertical: 14,
+    flex: 1, flexDirection: 'column',
+    alignItems: 'center', gap: 5,
+    borderRadius: 12, paddingVertical: 10, paddingHorizontal: 8,
   },
-  actionLabel: { fontSize: 14, fontWeight: '600', color: colors.primaryGreen },
-  actionDivider: { width: 1, backgroundColor: colors.softGray, marginVertical: 12 },
+  actionLabel: { fontSize: 12, fontWeight: '600' },
 
-  infoCard: { backgroundColor: colors.white, marginTop: 8, marginHorizontal: 0 },
-  infoRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 13 },
+  /* 정보 카드 */
+  infoCard: { backgroundColor: colors.white, marginBottom: 8, paddingHorizontal: 16, paddingVertical: 4 },
+  infoRow: { flexDirection: 'row', alignItems: 'flex-start', paddingVertical: 9 },
   infoRowBorder: { borderBottomWidth: 1, borderBottomColor: colors.softGray },
-  infoIconWrap: { width: 28 },
-  infoRowLabel: { fontSize: 13, color: colors.mediumGray, width: 60 },
-  infoRowValue: { flex: 1, fontSize: 13, color: colors.charcoalBlack, fontWeight: '500' },
+  infoIconWrap: { width: 24, marginTop: 1 },
+  infoRowLabel: { fontSize: 12, color: colors.mediumGray, width: 52, flexShrink: 0 },
+  infoRowValue: { flex: 1, fontSize: 13, color: colors.charcoalBlack, lineHeight: 18 },
+  descText: { fontSize: 13, color: colors.mediumGray, lineHeight: 21, paddingVertical: 12 },
 
-  descCard: { backgroundColor: colors.white, marginTop: 8, padding: 16 },
-  descText: { fontSize: 13, color: '#555', lineHeight: 21, marginBottom: 12 },
-  tagRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  tag: {
-    backgroundColor: colors.freshMint, borderRadius: 20,
-    paddingHorizontal: 12, paddingVertical: 5,
+  /* 태그 */
+  tagSection: {
+    flexDirection: 'row', flexWrap: 'wrap', gap: 6,
+    backgroundColor: colors.white, padding: 10, paddingHorizontal: 16, marginBottom: 8,
   },
+  tag: { backgroundColor: colors.freshMint, borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4 },
   tagText: { fontSize: 12, color: colors.primaryGreen, fontWeight: '600' },
 
+  /* 탭 */
   tabs: {
-    flexDirection: 'row',
-    flexWrap: 'nowrap',
+    flexDirection: 'row', flexWrap: 'nowrap',
     backgroundColor: colors.white,
-    borderBottomWidth: 2, borderBottomColor: colors.softGray, marginTop: 8,
+    borderBottomWidth: 2, borderBottomColor: colors.softGray, marginBottom: 8,
   },
   tabBtn: {
     flex: 1, paddingVertical: 13, alignItems: 'center',
@@ -280,17 +314,40 @@ const styles = StyleSheet.create({
   tabBtnActive: { borderBottomColor: colors.primaryGreen },
   tabText: { fontSize: 14, color: colors.mediumGray },
   tabTextActive: { color: colors.primaryGreen, fontWeight: '800' },
-  tabContent: { padding: 16 },
+  tabContent: { paddingHorizontal: 16 },
 
-  empty: { alignItems: 'center', paddingTop: 48 },
-  emptyEmoji: { fontSize: 48, marginBottom: 12 },
+  empty: { alignItems: 'center', paddingTop: 40 },
+  emptyEmoji: { fontSize: 40, marginBottom: 10 },
   emptyText: { fontSize: 14, color: colors.mediumGray },
 
-  infoTabCard: { backgroundColor: colors.white, borderRadius: 14, padding: 16, gap: 14 },
-  noticeBox: { backgroundColor: colors.freshMint, borderRadius: 10, padding: 14, marginBottom: 4 },
-  noticeTitle: { fontSize: 13, fontWeight: '700', color: colors.primaryGreen, marginBottom: 6 },
-  noticeText: { fontSize: 13, color: colors.charcoalBlack, lineHeight: 20 },
-  infoDetailRow: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
-  infoLabel: { fontSize: 12, color: colors.mediumGray, marginBottom: 2 },
-  infoValue: { fontSize: 14, fontWeight: '600', color: colors.charcoalBlack },
+  soldoutHeader: { fontSize: 13, fontWeight: '700', color: colors.mediumGray, marginBottom: 10, marginTop: 8 },
+
+  /* 매장 정보 탭 */
+  noticeBox: {
+    backgroundColor: '#FFF8E6', borderRadius: 12, padding: 14, marginBottom: 12,
+  },
+  noticeTitle: { fontSize: 13, fontWeight: '700', color: colors.warmOrange, marginBottom: 6 },
+  noticeText: { fontSize: 13, color: '#7A5C1E', lineHeight: 20 },
+
+  mapPlaceholder: {
+    height: 160, borderRadius: 14, backgroundColor: '#E8F4E8',
+    overflow: 'hidden', marginBottom: 12,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  mapLabel: {
+    marginTop: 6, backgroundColor: colors.primaryGreen,
+    borderRadius: 8, paddingHorizontal: 12, paddingVertical: 5,
+  },
+  mapLabelText: { fontSize: 12, fontWeight: '700', color: colors.white },
+
+  addressCard: {
+    backgroundColor: colors.white, borderRadius: 12, padding: 16, marginBottom: 12,
+  },
+  addressTitle: { fontSize: 14, fontWeight: '700', color: colors.charcoalBlack, marginBottom: 6 },
+  addressText: { fontSize: 13, color: colors.mediumGray, marginBottom: 12 },
+  dirBtn: {
+    backgroundColor: colors.freshMint, borderRadius: 10, padding: 11,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+  },
+  dirBtnText: { fontSize: 14, fontWeight: '700', color: colors.primaryGreen },
 });

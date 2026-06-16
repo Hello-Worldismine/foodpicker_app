@@ -30,6 +30,7 @@ export default function LikedScreen({ navigation }) {
             product={p}
             onPress={pr => navigation.navigate('ProductDetail', { productId: pr.id })}
             onLike={handleLike}
+            onStorePress={storeId => navigation.navigate('Store', { storeId })}
           />
         ))}
       </ScrollView>

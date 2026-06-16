@@ -11,7 +11,7 @@ function formatPickupTime(isoStart, isoEnd) {
   return `${fmt(isoStart)}~${fmt(isoEnd)}`;
 }
 
-export default function ProductCard({ product, onPress, onLike }) {
+export default function ProductCard({ product, onPress, onLike, onStorePress }) {
   const soldout = product.status === 'soldout';
   const badges = product.badges?.filter(b => b !== '품절') || [];
   const hasMagam = badges.some(b => b.includes('마감'));
@@ -58,9 +58,10 @@ export default function ProductCard({ product, onPress, onLike }) {
         {/* 하단 우측 찜 버튼 */}
         <TouchableOpacity style={styles.likeBtn} onPress={() => onLike?.(product.id)}>
           <Heart
-            size={18}
-            color={product.liked ? colors.alertRed : colors.white}
+            size={16}
+            color={product.liked ? colors.alertRed : colors.mediumGray}
             fill={product.liked ? colors.alertRed : 'none'}
+            strokeWidth={2}
           />
         </TouchableOpacity>
       </View>
@@ -68,7 +69,9 @@ export default function ProductCard({ product, onPress, onLike }) {
       {/* 정보 영역 */}
       <View style={styles.info}>
         <Text style={styles.name} numberOfLines={1}>{product.name}</Text>
-        <Text style={styles.store} numberOfLines={1}>{product.store} · {product.distance}m</Text>
+        <TouchableOpacity onPress={() => onStorePress?.(product.storeId)} hitSlop={{ top: 4, bottom: 4 }}>
+          <Text style={styles.store} numberOfLines={1}>{product.store} · {product.distance >= 1000 ? `${(product.distance/1000).toFixed(1)}km` : `${product.distance}m`}</Text>
+        </TouchableOpacity>
 
         <View style={styles.priceRow}>
           <Text style={styles.originalPrice}>{product.originalPrice.toLocaleString()}원</Text>
