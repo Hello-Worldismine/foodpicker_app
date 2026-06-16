@@ -13,6 +13,9 @@ export default function LikedScreen({ navigation }) {
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>찜한 상품</Text>
+        {liked.length > 0 && (
+          <Text style={styles.headerSub}>총 {liked.length}개의 상품을 찜했어요</Text>
+        )}
       </View>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.list}>
         {liked.length === 0 ? (
@@ -36,8 +39,9 @@ export default function LikedScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.softGray },
-  header: { backgroundColor: colors.white, padding: 16, borderBottomWidth: 1, borderBottomColor: colors.softGray },
-  headerTitle: { fontSize: 20, fontWeight: '900', color: colors.charcoalBlack },
+  header: { backgroundColor: colors.white, paddingHorizontal: 16, paddingTop: 16, paddingBottom: 14, borderBottomWidth: 1, borderBottomColor: colors.softGray },
+  headerTitle: { fontSize: 20, fontWeight: '900', color: colors.charcoalBlack, marginBottom: 2 },
+  headerSub: { fontSize: 13, color: colors.mediumGray },
   list: { padding: 16, paddingBottom: 80 },
   empty: { alignItems: 'center', paddingTop: 80 },
   emptyEmoji: { fontSize: 56, marginBottom: 16 },
