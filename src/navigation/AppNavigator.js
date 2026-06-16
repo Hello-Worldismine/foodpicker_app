@@ -26,6 +26,7 @@ import CouponScreen from '../screens/CouponScreen';
 import MyOrderListScreen from '../screens/MyOrderListScreen';
 import TermsScreen from '../screens/TermsScreen';
 import SearchScreen from '../screens/SearchScreen';
+import CategoryProductsScreen from '../screens/CategoryProductsScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -84,6 +85,7 @@ export default function AppNavigator() {
         <Stack.Screen name="MyOrders" component={MyOrderListScreen} />
         <Stack.Screen name="Terms" component={TermsScreen} />
         <Stack.Screen name="Search" component={SearchScreen} />
+        <Stack.Screen name="CategoryProducts" component={CategoryProductsScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

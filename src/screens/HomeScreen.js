@@ -4,13 +4,14 @@ import {
   FlatList, Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Bell, Search, ChevronRight, ChevronDown,
-  LayoutGrid, Wheat, Package, Leaf, Utensils, Cookie, Coffee, Clock } from 'lucide-react-native';
+import {
+  Bell, Search, ChevronRight, ChevronDown,
+  LayoutGrid, Wheat, Package, Leaf, Utensils, Cookie, Coffee, Clock,
+} from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors } from '../theme';
 import { useApp } from '../context/AppContext';
 import { stores, mockBannerAds } from '../data/mockData';
-import ProductCard from '../components/ProductCard';
 
 const CATEGORIES = [
   { key: '전체',   Icon: LayoutGrid, color: '#22A06B', bg: '#E9F8F1' },
@@ -27,17 +28,14 @@ const { width: SCREEN_W } = Dimensions.get('window');
 const BANNER_W = SCREEN_W - 32;
 
 export default function HomeScreen({ navigation }) {
-  const { productList, handleLike } = useApp();
-  const [selectedCategory, setSelectedCategory] = useState('전체');
+  const { handleLike } = useApp();
   const [bannerIndex, setBannerIndex] = useState(0);
 
-  const filteredProducts = selectedCategory === '전체'
-    ? productList
-    : selectedCategory === '마감임박'
-      ? productList.filter(p => p.badges?.includes('마감임박'))
-      : productList.filter(p => p.category === selectedCategory);
+  const nearbyStores = [...stores].sort((a, b) => a.distance - b.distance).slice(0, 6);
 
-  const nearbyStores = [...stores].sort((a, b) => a.distance - b.distance).slice(0, 5);
+  function goCategory(category) {
+    navigation.navigate('CategoryProducts', { category });
+  }
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -48,17 +46,20 @@ export default function HomeScreen({ navigation }) {
           <ChevronDown size={16} color={colors.charcoalBlack} />
         </TouchableOpacity>
         <TouchableOpacity
-          onPress={() => navigation.navigate('Notifications')}
           style={styles.bellWrap}
+          onPress={() => navigation.navigate('Notifications')}
         >
           <Bell size={22} color={colors.charcoalBlack} />
           <View style={styles.bellDot} />
         </TouchableOpacity>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView showsVerticalScrollIndicator={false} style={styles.scroll}>
         {/* 검색 바 */}
-        <TouchableOpacity style={styles.searchBar} onPress={() => navigation.navigate('Search')}>
+        <TouchableOpacity
+          style={styles.searchBar}
+          onPress={() => navigation.navigate('Search')}
+        >
           <Search size={15} color={colors.mediumGray} />
           <Text style={styles.searchPlaceholder}>음식 또는 가게 검색</Text>
         </TouchableOpacity>
@@ -74,11 +75,19 @@ export default function HomeScreen({ navigation }) {
             setBannerIndex(Math.round(e.nativeEvent.contentOffset.x / BANNER_W));
           }}
           renderItem={({ item }) => (
-            <LinearGradient colors={item.bg} style={[styles.banner, { width: BANNER_W }]}>
+            <LinearGradient
+              colors={item.bg}
+              style={[styles.banner, { width: BANNER_W }]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+            >
               <View style={styles.bannerContent}>
                 <Text style={styles.bannerTitle}>{item.title}</Text>
                 <Text style={styles.bannerDesc}>{item.description}</Text>
-                <TouchableOpacity style={styles.bannerBtn}>
+                <TouchableOpacity
+                  style={styles.bannerBtn}
+                  onPress={() => goCategory(item.category)}
+                >
                   <Text style={styles.bannerBtnText}>{item.btnLabel}</Text>
                 </TouchableOpacity>
               </View>
@@ -89,6 +98,7 @@ export default function HomeScreen({ navigation }) {
           snapToInterval={BANNER_W}
           decelerationRate="fast"
         />
+
         {/* 배너 인디케이터 */}
         <View style={styles.indicators}>
           {mockBannerAds.map((_, i) => (
@@ -96,34 +106,28 @@ export default function HomeScreen({ navigation }) {
           ))}
         </View>
 
-        {/* 카테고리 2×4 그리드 */}
-        <View style={styles.catGrid}>
-          {CATEGORIES.map(c => {
+        {/* 카테고리 2×4 그리드 — 개별 흰색 카드, 회색 배경 */}
+        <View style={styles.catSection}>
+          {CATEGORIES.map((c, idx) => {
             const Icon = c.Icon;
-            const active = selectedCategory === c.key;
             return (
               <TouchableOpacity
                 key={c.key}
-                style={styles.catItem}
-                onPress={() => setSelectedCategory(c.key)}
+                style={styles.catCard}
+                onPress={() => goCategory(c.key)}
+                activeOpacity={0.75}
               >
-                <View style={[
-                  styles.catIconWrap,
-                  { backgroundColor: c.bg },
-                  active && styles.catIconWrapActive,
-                ]}>
+                <View style={[styles.catIconCircle, { backgroundColor: c.bg }]}>
                   <Icon size={22} color={c.color} />
                 </View>
-                <Text style={[styles.catLabel, active && { color: c.color, fontWeight: '700' }]}>
-                  {c.key}
-                </Text>
+                <Text style={styles.catLabel}>{c.key}</Text>
               </TouchableOpacity>
             );
           })}
         </View>
 
         {/* 내 주변 매장 */}
-        <View style={styles.section}>
+        <View style={styles.storeSection}>
           <View style={styles.sectionHeader}>
             <View>
               <Text style={styles.sectionTitle}>내 주변 매장</Text>
@@ -134,26 +138,34 @@ export default function HomeScreen({ navigation }) {
               <ChevronRight size={14} color={colors.primaryGreen} />
             </TouchableOpacity>
           </View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 10 }}>
+
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.storeList}
+          >
             {nearbyStores.map(s => (
               <TouchableOpacity
                 key={s.id}
                 style={styles.storeCard}
                 onPress={() => navigation.navigate('Store', { storeId: s.id })}
+                activeOpacity={0.82}
               >
-                {/* 상태 도트 */}
+                {/* 상태 점 */}
                 <View style={styles.statusDotWrap}>
                   <View style={[styles.statusDot, {
-                    backgroundColor: s.status === 'selling' ? colors.primaryGreen
+                    backgroundColor:
+                      s.status === 'selling' ? colors.primaryGreen
                       : s.status === 'closing' ? colors.warmOrange
-                      : colors.mediumGray
+                      : colors.mediumGray,
                   }]} />
                 </View>
                 {/* 이모지 */}
                 <View style={[styles.storeEmojiBox, {
-                  backgroundColor: s.status === 'selling' ? colors.freshMint
+                  backgroundColor:
+                    s.status === 'selling' ? colors.freshMint
                     : s.status === 'closing' ? '#FFF3E0'
-                    : '#F0F0F0'
+                    : '#F0F0F0',
                 }]}>
                   <Text style={styles.storeEmoji}>{s.emoji}</Text>
                 </View>
@@ -164,35 +176,7 @@ export default function HomeScreen({ navigation }) {
           </ScrollView>
         </View>
 
-        {/* 상품 목록 */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <View>
-              <Text style={styles.sectionTitle}>
-                {selectedCategory === '전체' ? '새로 등록된 상품' : `${selectedCategory} 상품`}
-              </Text>
-              <Text style={styles.sectionSub}>
-                {selectedCategory === '전체' ? '방금 막 올라왔어요' : `총 ${filteredProducts.length}개`}
-              </Text>
-            </View>
-          </View>
-          {filteredProducts.map(product => (
-            <ProductCard
-              key={product.id}
-              product={product}
-              onPress={p => navigation.navigate('ProductDetail', { productId: p.id })}
-              onLike={handleLike}
-            />
-          ))}
-          {filteredProducts.length === 0 && (
-            <View style={styles.empty}>
-              <Text style={styles.emptyEmoji}>🔍</Text>
-              <Text style={styles.emptyText}>해당 카테고리의 상품이 없습니다</Text>
-            </View>
-          )}
-        </View>
-
-        <View style={{ height: 20 }} />
+        <View style={{ height: 30 }} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -200,9 +184,13 @@ export default function HomeScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.softGray },
+  scroll: { flex: 1 },
+
+  /* 헤더 */
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16, paddingVertical: 14, backgroundColor: colors.white,
+    paddingHorizontal: 16, paddingVertical: 14,
+    backgroundColor: colors.white,
   },
   locationBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   locationText: { fontSize: 17, fontWeight: '800', color: colors.charcoalBlack },
@@ -214,83 +202,115 @@ const styles = StyleSheet.create({
     borderWidth: 1.5, borderColor: colors.white,
   },
 
+  /* 검색 */
   searchBar: {
     flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: colors.softGray,
-    margin: 12, marginBottom: 8, borderRadius: 12, padding: 13,
+    backgroundColor: colors.white,
+    marginHorizontal: 12, marginTop: 10, marginBottom: 12,
+    borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05, shadowRadius: 3, elevation: 1,
   },
   searchPlaceholder: { fontSize: 14, color: colors.mediumGray },
 
+  /* 배너 */
   bannerList: { paddingHorizontal: 16 },
   banner: {
-    borderRadius: 16, padding: 20,
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    minHeight: 130,
+    borderRadius: 18, padding: 20,
+    flexDirection: 'row', alignItems: 'center',
+    justifyContent: 'space-between', minHeight: 138,
   },
   bannerContent: { flex: 1 },
-  bannerTitle: { fontSize: 18, fontWeight: '900', color: colors.white, lineHeight: 25, marginBottom: 6 },
-  bannerDesc: { fontSize: 12, color: 'rgba(255,255,255,0.88)', marginBottom: 14, lineHeight: 17 },
+  bannerTitle: {
+    fontSize: 18, fontWeight: '900', color: colors.white,
+    lineHeight: 26, marginBottom: 8,
+  },
+  bannerDesc: {
+    fontSize: 12, color: 'rgba(255,255,255,0.88)',
+    lineHeight: 17, marginBottom: 16,
+  },
   bannerBtn: {
-    backgroundColor: 'rgba(255,255,255,0.28)',
-    paddingHorizontal: 14, paddingVertical: 8,
+    backgroundColor: 'rgba(255,255,255,0.25)',
+    paddingHorizontal: 16, paddingVertical: 8,
     borderRadius: 20, alignSelf: 'flex-start',
   },
-  bannerBtnText: { fontSize: 12, fontWeight: '700', color: colors.white },
-  bannerEmoji: { fontSize: 54, marginLeft: 8 },
+  bannerBtnText: { fontSize: 13, fontWeight: '700', color: colors.white },
+  bannerEmoji: { fontSize: 56, marginLeft: 8 },
 
-  indicators: { flexDirection: 'row', justifyContent: 'center', gap: 5, marginTop: 10, marginBottom: 4 },
+  /* 인디케이터 */
+  indicators: {
+    flexDirection: 'row', justifyContent: 'center', gap: 5,
+    marginTop: 12, marginBottom: 4,
+  },
   dot: { width: 5, height: 5, borderRadius: 3, backgroundColor: '#D1D5DB' },
-  dotActive: { width: 16, backgroundColor: colors.primaryGreen, borderRadius: 3 },
+  dotActive: { width: 18, backgroundColor: colors.primaryGreen, borderRadius: 3 },
 
-  // 카테고리 2×4 그리드
-  catGrid: {
-    flexDirection: 'row', flexWrap: 'wrap',
-    paddingHorizontal: 12, marginVertical: 8,
+  /* 카테고리 그리드 */
+  catSection: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    backgroundColor: colors.softGray,
+    paddingHorizontal: 10,
+    paddingVertical: 14,
+    gap: 8,
+  },
+  catCard: {
+    width: (SCREEN_W - 20 - 24) / 4,   // 4열, 패딩·간격 제외
     backgroundColor: colors.white,
-    paddingVertical: 12,
+    borderRadius: 14,
+    alignItems: 'center',
+    paddingVertical: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 3,
+    elevation: 1,
   },
-  catItem: {
-    width: '25%', alignItems: 'center', paddingVertical: 8,
-  },
-  catIconWrap: {
-    width: 52, height: 52, borderRadius: 16,
+  catIconCircle: {
+    width: 50, height: 50, borderRadius: 25,
     alignItems: 'center', justifyContent: 'center',
-    marginBottom: 6,
+    marginBottom: 8,
   },
-  catIconWrapActive: {
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.12, shadowRadius: 4, elevation: 3,
-  },
-  catLabel: { fontSize: 12, color: colors.charcoalBlack, fontWeight: '500' },
+  catLabel: { fontSize: 12, fontWeight: '500', color: colors.charcoalBlack },
 
-  section: { paddingHorizontal: 16, marginTop: 16 },
+  /* 주변 매장 */
+  storeSection: {
+    backgroundColor: colors.white,
+    paddingTop: 18, paddingBottom: 20,
+    marginTop: 8,
+  },
   sectionHeader: {
     flexDirection: 'row', alignItems: 'flex-start',
-    justifyContent: 'space-between', marginBottom: 12,
+    justifyContent: 'space-between',
+    paddingHorizontal: 16, marginBottom: 14,
   },
   sectionTitle: { fontSize: 18, fontWeight: '900', color: colors.charcoalBlack },
   sectionSub: { fontSize: 12, color: colors.mediumGray, marginTop: 2 },
   moreBtn: { flexDirection: 'row', alignItems: 'center', gap: 2, marginTop: 4 },
   moreText: { fontSize: 13, color: colors.primaryGreen, fontWeight: '600' },
 
+  storeList: { paddingHorizontal: 16, gap: 10 },
   storeCard: {
-    width: 100, backgroundColor: colors.white, borderRadius: 14,
-    padding: 10, alignItems: 'center',
+    width: 110,
+    backgroundColor: colors.white,
+    borderRadius: 14,
+    paddingHorizontal: 10, paddingVertical: 12,
+    alignItems: 'center',
+    position: 'relative',
     shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.06, shadowRadius: 4, elevation: 2,
-    position: 'relative',
   },
-  statusDotWrap: { position: 'absolute', top: 8, right: 8 },
+  statusDotWrap: { position: 'absolute', top: 10, right: 10 },
   statusDot: { width: 8, height: 8, borderRadius: 4 },
   storeEmojiBox: {
-    width: 56, height: 56, borderRadius: 14,
-    alignItems: 'center', justifyContent: 'center', marginBottom: 7,
+    width: 64, height: 64, borderRadius: 16,
+    alignItems: 'center', justifyContent: 'center',
+    marginBottom: 8,
   },
-  storeEmoji: { fontSize: 28 },
-  storeName: { fontSize: 11, fontWeight: '700', color: colors.charcoalBlack, textAlign: 'center', marginBottom: 2 },
+  storeEmoji: { fontSize: 30 },
+  storeName: {
+    fontSize: 11, fontWeight: '700', color: colors.charcoalBlack,
+    textAlign: 'center', marginBottom: 3,
+  },
   storeInfo: { fontSize: 10, color: colors.mediumGray, textAlign: 'center' },
-
-  empty: { alignItems: 'center', paddingVertical: 48 },
-  emptyEmoji: { fontSize: 48, marginBottom: 12 },
-  emptyText: { fontSize: 14, color: colors.mediumGray },
 });

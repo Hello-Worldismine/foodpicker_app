@@ -88,7 +88,7 @@ export default function StoreScreen({ route, navigation }) {
         </TouchableOpacity>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} stickyHeaderIndices={[2]}>
+      <ScrollView showsVerticalScrollIndicator={false}>
         {/* 매장 정보 rows */}
         <View style={styles.infoCard}>
           <InfoRow icon={<MapPin size={15} color={colors.mediumGray} />} label="주소" value={store.address} />
@@ -268,7 +268,9 @@ const styles = StyleSheet.create({
   tagText: { fontSize: 12, color: colors.primaryGreen, fontWeight: '600' },
 
   tabs: {
-    flexDirection: 'row', backgroundColor: colors.white,
+    flexDirection: 'row',
+    flexWrap: 'nowrap',
+    backgroundColor: colors.white,
     borderBottomWidth: 2, borderBottomColor: colors.softGray, marginTop: 8,
   },
   tabBtn: {

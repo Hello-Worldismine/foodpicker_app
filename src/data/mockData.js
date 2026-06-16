@@ -303,7 +303,8 @@ export const mockOrders = [
 ];
 
 export const mockBannerAds = [
-  { id: 1, emoji: '🌱', bg: ['#1A8F5A', '#22A06B'], title: '오늘 버려질 수 있는\n음식을 구해보세요', description: '최대 70% 할인 · 근처 매장에서 바로 픽업', btnLabel: '근처 상품 보기' },
-  { id: 2, emoji: '🥐', bg: ['#E65C00', '#FF8A3D'], title: '베이커리 할인\n오늘만 특가!',   description: '오늘 구운 빵 최대 60% 할인 · 지금 바로 예약',  btnLabel: '빵 상품 보기' },
-  { id: 3, emoji: '🍱', bg: ['#2962FF', '#5B8DEF'], title: '오늘의 도시락\n픽업 특가',     description: '점심·저녁 도시락 최대 50% · 매장 직접 픽업',  btnLabel: '도시락 보기' },
+  { id: 1, emoji: '🌱', bg: ['#1A8F5A', '#22A06B'], title: '오늘 버려질 수 있는\n음식을 구해보세요', description: '최대 70% 할인 · 근처 매장에서 바로 픽업', btnLabel: '근처 상품 보기', category: '전체' },
+  { id: 2, emoji: '🥐', bg: ['#E65C00', '#FF8A3D'], title: '베이커리 할인\n오늘만 특가!',   description: '오늘 구운 빵 최대 60% 할인 · 지금 바로 예약',  btnLabel: '빵 상품 보기',  category: '빵' },
+  { id: 3, emoji: '🍱', bg: ['#2962FF', '#5B8DEF'], title: '오늘의 도시락\n픽업 특가',     description: '점심·저녁 도시락 최대 50% · 매장 직접 픽업',  btnLabel: '도시락 보기',  category: '도시락' },
+  { id: 4, emoji: '🍰', bg: ['#6D28D9', '#A855F7'], title: '디저트 마감 할인\n지금 놓치면 아쉬워요', description: '케이크·음료 등 오늘 마감 특가 상품 모아보기', btnLabel: '디저트 보기', category: '디저트' },
 ];
